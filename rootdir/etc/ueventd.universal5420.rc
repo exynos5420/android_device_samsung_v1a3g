@@ -75,3 +75,11 @@
 # USB Driver
 /dev/ttyUSB*              0660   system     usb
 /dev/usb/lp*              0660   system     usb
+
+/dev/block/mmcblk0p8      0660   system     system
+
+# MDM 9x25
+/dev/block/mmcblk0p4      0660   system     radio
+/dev/block/mmcblk0p5      0660   system     radio
+/dev/block/mmcblk0p6      0660   system     radio
+/dev/block/mmcblk0p14     0660   system     radio
