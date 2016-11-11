@@ -16,7 +16,7 @@
 
 LOCAL_PATH := $(call my-dir)
 
-ifeq ($(TARGET_DEVICE),v1awifi)
+ifeq ($(TARGET_DEVICE),v1a3g)
 
 include $(call all-makefiles-under,$(LOCAL_PATH))
 

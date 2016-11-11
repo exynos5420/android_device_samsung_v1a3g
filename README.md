@@ -1,2 +1,2 @@
-SM-P900 device repo for CyangenMod.
+SM-P901/P902 device repo for CyangenMod.
 

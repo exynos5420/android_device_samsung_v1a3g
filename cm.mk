@@ -1,13 +1,13 @@
-$(call inherit-product, device/samsung/v1awifi/full_v1awifi.mk)
+$(call inherit-product, device/samsung/v1a3g/full_v1a3g.mk)
 
 # Inherit some common CM stuff.
 $(call inherit-product, vendor/cm/config/common_full_tablet_wifionly.mk)
 
-PRODUCT_NAME := cm_v1awifi
-PRODUCT_DEVICE := v1awifi
+PRODUCT_NAME := cm_v1a3g
+PRODUCT_DEVICE := v1a3g
 
 PRODUCT_BUILD_PROP_OVERRIDES += \
-    PRODUCT_MODEL=SM-P900 \
-    PRODUCT_NAME=v1awifi \
-    PRODUCT_DEVICE=v1awifi \
-    TARGET_DEVICE=v1awifi \
+    PRODUCT_MODEL=SM-P901 \
+    PRODUCT_NAME=v1a3g \
+    PRODUCT_DEVICE=v1a3g \
+    TARGET_DEVICE=v1a3g
