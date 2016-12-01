@@ -4754,6 +4754,7 @@ typedef struct {
  */
 #define RIL_REQUEST_SIM_TRANSMIT_APDU_BASIC 114
 
+#if 0
 /**
  * RIL_REQUEST_SIM_OPEN_CHANNEL
  *
@@ -4793,6 +4794,7 @@ typedef struct {
  *  GENERIC_FAILURE
  */
 #define RIL_REQUEST_SIM_CLOSE_CHANNEL 116
+#endif
 
 /**
  * RIL_REQUEST_SIM_TRANSMIT_APDU_CHANNEL
