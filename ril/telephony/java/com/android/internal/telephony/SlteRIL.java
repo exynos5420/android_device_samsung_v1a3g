@@ -45,7 +45,7 @@ public class SlteRIL extends RIL {
      * SAMSUNG REQUESTS
      **********************************************************/
     static final boolean RILJ_LOGD = true;
-    static final boolean RILJ_LOGV = true;
+    static final boolean RILJ_LOGV = false;
 
     private static final int RIL_UNSOL_DEVICE_READY_NOTI = 11008;
     private static final int RIL_UNSOL_AM = 11010;
@@ -127,31 +127,6 @@ public class SlteRIL extends RIL {
         }
 
         send(rr);
-    }
-
-    @Override
-    public void
-    getIccCardStatus(Message result) {
-        if (mState != RadioState.RADIO_ON) {
-            mPendingGetSimStatus = result;
-        } else {
-          //Note: This RIL request has not been renamed to ICC,
-          //       but this request is also valid for SIM and RUIM
-          RILRequest rr = RILRequest.obtain(RIL_REQUEST_GET_SIM_STATUS, result);
-
-          if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
-
-          send(rr);
-        }
-    }
-
-    public void setDataAllowed(boolean allowed, Message result) {
-        Rlog.v(RILJ_LOG_TAG, "XMM7260RIL: setDataAllowed");
-
-        if (result != null) {
-            AsyncResult.forMessage(result, 0, null);
-            result.sendToTarget();
-        }
     }
 
     @Override
@@ -521,4 +496,3 @@ public class SlteRIL extends RIL {
         return ret;
     }
 }
-
