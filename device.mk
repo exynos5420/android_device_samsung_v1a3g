@@ -212,6 +212,14 @@ PRODUCT_PACKAGES += \
     libwpa_client \
     wpa_supplicant
 
+# Radio
+PRODUCT_PACKAGES += \
+    libril \
+    librilutils \
+    rild \
+    libxml2 \
+    libprotobuf-cpp-full
+
 PRODUCT_PACKAGES += \
     libnetcmdiface \
     macloader \
