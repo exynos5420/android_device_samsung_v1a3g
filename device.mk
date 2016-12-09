@@ -181,11 +181,10 @@ PRODUCT_PACKAGES += \
 
 # Radio (needed for audio controls even on wifi-only)
 PRODUCT_PACKAGES += \
-    libsecril-client \
-    libsecril-client-sap \
     libril \
     librilutils \
-    rild
+    rild \
+    modemloader
 
 # Recovery
 PRODUCT_PACKAGES += \
@@ -211,14 +210,6 @@ PRODUCT_PACKAGES += \
     hostapd_default.conf \
     libwpa_client \
     wpa_supplicant
-
-# Radio
-PRODUCT_PACKAGES += \
-    libril \
-    librilutils \
-    rild \
-    libxml2 \
-    libprotobuf-cpp-full
 
 PRODUCT_PACKAGES += \
     libnetcmdiface \
