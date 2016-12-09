@@ -185,7 +185,8 @@ PRODUCT_PACKAGES += \
     libsecril-client-sap \
     libril \
     librilutils \
-    rild
+    rild \
+    modemloader
 
 # Recovery
 PRODUCT_PACKAGES += \
@@ -212,19 +213,10 @@ PRODUCT_PACKAGES += \
     libwpa_client \
     wpa_supplicant
 
-# Radio
-PRODUCT_PACKAGES += \
-    libril \
-    librilutils \
-    rild \
-    libxml2 \
-    libprotobuf-cpp-full
-
 PRODUCT_PACKAGES += \
     libnetcmdiface \
     macloader \
-    wifiloader \
-    modemloader
+    wifiloader
 
 # Enable multi-window by default
 PRODUCT_PROPERTY_OVERRIDES += \
