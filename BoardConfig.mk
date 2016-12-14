@@ -35,6 +35,7 @@ TARGET_OTA_ASSERT_DEVICE := v1a3g,v1a3gxx
 
 # Kernel
 TARGET_KERNEL_CONFIG := cyanogenmod_deathly_v1a3g_defconfig
+BOARD_CUSTOM_BOOTIMG := true
 
 # IR Blaster
 IR_HAS_ONE_FREQ_RANGE := true
