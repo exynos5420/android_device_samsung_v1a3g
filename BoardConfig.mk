@@ -35,6 +35,8 @@ TARGET_OTA_ASSERT_DEVICE := v1a3g,v1a3gxx
 
 # Kernel
 TARGET_KERNEL_CONFIG := lineageos_deathly_v1a3g_defconfig
+BOARD_CUSTOM_BOOTIMG := true
+BOARD_CUSTOM_BOOTIMG_MK := $(LOCAL_PATH)/mkbootimg.mk
 
 # IR Blaster
 IR_HAS_ONE_FREQ_RANGE := true
