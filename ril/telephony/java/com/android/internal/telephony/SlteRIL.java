@@ -45,7 +45,7 @@ public class SlteRIL extends RIL {
      * SAMSUNG REQUESTS
      **********************************************************/
     static final boolean RILJ_LOGD = true;
-    static final boolean RILJ_LOGV = false;
+    static final boolean RILJ_LOGV = true;
 
     private static final int RIL_UNSOL_DEVICE_READY_NOTI = 11008;
     private static final int RIL_UNSOL_AM = 11010;
@@ -127,6 +127,31 @@ public class SlteRIL extends RIL {
         }
 
         send(rr);
+    }
+
+    @Override
+    public void
+    getIccCardStatus(Message result) {
+        if (mState != RadioState.RADIO_ON) {
+            mPendingGetSimStatus = result;
+        } else {
+          //Note: This RIL request has not been renamed to ICC,
+          //       but this request is also valid for SIM and RUIM
+          RILRequest rr = RILRequest.obtain(RIL_REQUEST_GET_SIM_STATUS, result);
+
+          if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
+
+          send(rr);
+        }
+    }
+
+    public void setDataAllowed(boolean allowed, Message result) {
+        Rlog.v(RILJ_LOG_TAG, "XMM7260RIL: setDataAllowed");
+
+        if (result != null) {
+            AsyncResult.forMessage(result, 0, null);
+            result.sendToTarget();
+        }
     }
 
     @Override
@@ -230,6 +255,7 @@ public class SlteRIL extends RIL {
     protected Object
     responseCallList(Parcel p) {
         int num;
+        int voiceSettings;
         ArrayList<DriverCall> response;
         DriverCall dc;
 
@@ -250,10 +276,11 @@ public class SlteRIL extends RIL {
             dc.isMpty = (0 != p.readInt());
             dc.isMT = (0 != p.readInt());
             dc.als = p.readInt();
-            dc.isVoice = (0 != p.readInt());
+            voiceSettings = p.readInt();
+            dc.isVoice = (0 == voiceSettings) ? false : true;
 
-            //int call_type = p.readInt();            // Samsung CallDetails
-            //int call_domain = p.readInt();          // Samsung CallDetails
+            int call_type = p.readInt();            // Samsung CallDetails
+            int call_domain = p.readInt();          // Samsung CallDetails
             //String csv = p.readString();            // Samsung CallDetails
 
             dc.isVoicePrivacy = (0 != p.readInt());
@@ -261,7 +288,8 @@ public class SlteRIL extends RIL {
             if (RILJ_LOGV) {
                 riljLog("responseCallList dc.number=" + dc.number);
             }
-            dc.numberPresentation = DriverCall.presentationFromCLIP(p.readInt());
+            int np = p.readInt();
+            dc.numberPresentation = DriverCall.presentationFromCLIP(np);
             dc.name = p.readString();
             if (RILJ_LOGV) {
                 riljLog("responseCallList dc.name=" + dc.name);
@@ -493,3 +521,4 @@ public class SlteRIL extends RIL {
         return ret;
     }
 }
+
