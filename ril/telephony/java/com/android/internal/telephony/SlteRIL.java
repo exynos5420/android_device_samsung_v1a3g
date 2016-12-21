@@ -20,6 +20,7 @@ import static com.android.internal.telephony.RILConstants.*;
 
 import android.content.Context;
 import android.telephony.Rlog;
+import android.os.AsyncResult;
 import android.os.Message;
 import android.os.Parcel;
 import android.telephony.PhoneNumberUtils;
@@ -28,6 +29,8 @@ import android.telephony.SmsManager;
 import com.android.internal.telephony.uicc.IccCardApplicationStatus;
 import com.android.internal.telephony.uicc.IccCardStatus;
 import com.android.internal.telephony.uicc.IccRefreshResponse;
+import com.android.internal.telephony.uicc.IccUtils;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 
@@ -44,18 +47,21 @@ public class SlteRIL extends RIL {
     static final boolean RILJ_LOGD = true;
     static final boolean RILJ_LOGV = true;
 
-    private static final int RIL_REQUEST_DIAL_EMERGENCY_CALL = 10001;
-    private static final int RIL_UNSOL_STK_SEND_SMS_RESULT = 11002;
-    private static final int RIL_UNSOL_STK_CALL_CONTROL_RESULT = 11003;
-
     private static final int RIL_UNSOL_DEVICE_READY_NOTI = 11008;
     private static final int RIL_UNSOL_AM = 11010;
     private static final int RIL_UNSOL_SIM_PB_READY = 11021;
 
-    private static final int RIL_UNSOL_WB_AMR_STATE = 20017;
+    private static final int RIL_REQUEST_DIAL_EMERGENCY_CALL = 10016;
+
+    private static final int RIL_REQUEST_SIM_TRANSMIT_BASIC = 10026;
+    private static final int RIL_REQUEST_SIM_OPEN_CHANNEL = 10027;
+    private static final int RIL_REQUEST_SIM_CLOSE_CHANNEL = 10028;
+    private static final int RIL_REQUEST_SIM_TRANSMIT_CHANNEL = 10029;
+
+    private Message mPendingGetSimStatus;
 
     public SlteRIL(Context context, int preferredNetworkType, int cdmaSubscription) {
-        this(context, preferredNetworkType, cdmaSubscription, null);
+        super(context, preferredNetworkType, cdmaSubscription, null);
     }
 
     public SlteRIL(Context context, int preferredNetworkType,
@@ -68,11 +74,10 @@ public class SlteRIL extends RIL {
         RILRequest rr =
             RILRequest.obtain(RIL_REQUEST_ANSWER, result);
 
-        if (RILJ_LOGD) {
-            riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
-        }
+        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
+
         rr.mParcel.writeInt(1);
-        rr.mParcel.writeInt(index);
+        rr.mParcel.writeInt(0);
 
         send(rr);
     }
@@ -81,6 +86,72 @@ public class SlteRIL extends RIL {
     public void
     acceptCall(Message result) {
         acceptCall(0, result);
+    }
+
+    /**
+     *  Translates EF_SMS status bits to a status value compatible with
+     *  SMS AT commands.  See TS 27.005 3.1.
+     */
+    private int translateStatus(int status) {
+        switch(status & 0x7) {
+            case SmsManager.STATUS_ON_ICC_READ:
+                return 1;
+            case SmsManager.STATUS_ON_ICC_UNREAD:
+                return 0;
+            case SmsManager.STATUS_ON_ICC_SENT:
+                return 3;
+            case SmsManager.STATUS_ON_ICC_UNSENT:
+                return 2;
+        }
+
+        // Default to READ.
+        return 1;
+    }
+
+    @Override
+    public void writeSmsToSim(int status, String smsc, String pdu, Message response) {
+        status = translateStatus(status);
+
+        RILRequest rr = RILRequest.obtain(RIL_REQUEST_WRITE_SMS_TO_SIM,
+                response);
+
+        rr.mParcel.writeInt(status);
+        rr.mParcel.writeString(pdu);
+        rr.mParcel.writeString(smsc);
+        rr.mParcel.writeInt(255);     /* Samsung */
+
+        if (RILJ_LOGV) {
+            riljLog(rr.serialString() + "> "
+                    + requestToString(rr.mRequest)
+                    + " " + status);
+        }
+
+        send(rr);
+    }
+
+    @Override
+    public void
+    getIccCardStatus(Message result) {
+        if (mState != RadioState.RADIO_ON) {
+            mPendingGetSimStatus = result;
+        } else {
+          //Note: This RIL request has not been renamed to ICC,
+          //       but this request is also valid for SIM and RUIM
+          RILRequest rr = RILRequest.obtain(RIL_REQUEST_GET_SIM_STATUS, result);
+
+          if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
+
+          send(rr);
+        }
+    }
+
+    public void setDataAllowed(boolean allowed, Message result) {
+        Rlog.v(RILJ_LOG_TAG, "XMM7260RIL: setDataAllowed");
+
+        if (result != null) {
+            AsyncResult.forMessage(result, 0, null);
+            result.sendToTarget();
+        }
     }
 
     @Override
@@ -118,7 +189,7 @@ public class SlteRIL extends RIL {
         RILRequest rr;
 
         rr = RILRequest.obtain(RIL_REQUEST_DIAL_EMERGENCY_CALL, result);
-        rr.mParcel.writeString(address);
+        rr.mParcel.writeString(address + "/");
         rr.mParcel.writeInt(clirMode);
         rr.mParcel.writeInt(0);        // CallDetails.call_type
         rr.mParcel.writeInt(3);        // CallDetails.call_domain
@@ -128,6 +199,15 @@ public class SlteRIL extends RIL {
         if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
 
         send(rr);
+    }
+
+    private void switchToRadioState(RadioState newState) {
+        setRadioState(newState);
+
+        if (newState == RadioState.RADIO_ON && mPendingGetSimStatus != null) {
+            getIccCardStatus(mPendingGetSimStatus);
+            mPendingGetSimStatus = null;
+        }
     }
 
     @Override
@@ -175,6 +255,7 @@ public class SlteRIL extends RIL {
     protected Object
     responseCallList(Parcel p) {
         int num;
+        int voiceSettings;
         ArrayList<DriverCall> response;
         DriverCall dc;
 
@@ -195,19 +276,20 @@ public class SlteRIL extends RIL {
             dc.isMpty = (0 != p.readInt());
             dc.isMT = (0 != p.readInt());
             dc.als = p.readInt();
-            dc.isVoice = (0 != p.readInt());
+            voiceSettings = p.readInt();
+            dc.isVoice = (0 == voiceSettings) ? false : true;
 
-            boolean isVideo = (0 != p.readInt());   // Samsung
             int call_type = p.readInt();            // Samsung CallDetails
             int call_domain = p.readInt();          // Samsung CallDetails
-            String csv = p.readString();            // Samsung CallDetails
+            //String csv = p.readString();            // Samsung CallDetails
 
             dc.isVoicePrivacy = (0 != p.readInt());
             dc.number = p.readString();
             if (RILJ_LOGV) {
                 riljLog("responseCallList dc.number=" + dc.number);
             }
-            dc.numberPresentation = DriverCall.presentationFromCLIP(p.readInt());
+            int np = p.readInt();
+            dc.numberPresentation = DriverCall.presentationFromCLIP(np);
             dc.name = p.readString();
             if (RILJ_LOGV) {
                 riljLog("responseCallList dc.name=" + dc.name);
@@ -308,6 +390,22 @@ public class SlteRIL extends RIL {
         rr.mParcel.writeString(pdu);
     }
 
+    /**
+     * The RIL can't handle the RIL_REQUEST_SEND_SMS_EXPECT_MORE
+     * request properly, so we use RIL_REQUEST_SEND_SMS instead.
+     */
+    @Override
+    public void sendSMSExpectMore(String smscPDU, String pdu, Message result) {
+        Rlog.v(RILJ_LOG_TAG, "XMM7260: sendSMSExpectMore");
+
+        RILRequest rr = RILRequest.obtain(RIL_REQUEST_SEND_SMS, result);
+        constructGsmSendSmsRilRequest(rr, smscPDU, pdu);
+
+        if (RILJ_LOGD) riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
+
+        send(rr);
+    }
+
     // This method is used in the search network functionality.
     // See mobile network setting -> network operators
     @Override
@@ -316,13 +414,13 @@ public class SlteRIL extends RIL {
         String strings[] = (String[])responseStrings(p);
         ArrayList<OperatorInfo> ret;
 
-        if (strings.length % mQANElements != 0) {
+        if (strings.length % 5 != 0) {
             throw new RuntimeException("RIL_REQUEST_QUERY_AVAILABLE_NETWORKS: invalid response. Got "
-                                       + strings.length + " strings, expected multiple of " + mQANElements);
+                                       + strings.length + " strings, expected multiple of " + 5);
         }
 
-        ret = new ArrayList<OperatorInfo>(strings.length / mQANElements);
-        for (int i = 0 ; i < strings.length ; i += mQANElements) {
+        ret = new ArrayList<OperatorInfo>(strings.length / 5);
+        for (int i = 0 ; i < strings.length ; i += 5) {
             String strOperatorLong = strings[i+0];
             String strOperatorNumeric = strings[i+2];
             String strState = strings[i+3].toLowerCase();
@@ -344,7 +442,7 @@ public class SlteRIL extends RIL {
 
     @Override
     protected void
-    processUnsolicited(Parcel p) {
+    processUnsolicited(Parcel p, int type) {
         Object ret;
 
         int dataPosition = p.dataPosition();
@@ -353,8 +451,18 @@ public class SlteRIL extends RIL {
 
         /* Remap incorrect respones or ignore them */
         switch (origResponse) {
-            case RIL_UNSOL_STK_CALL_CONTROL_RESULT:
-            case RIL_UNSOL_WB_AMR_STATE:
+            case 1040:
+                newResponse = RIL_UNSOL_ON_SS;
+                break;
+            case 1041:
+                newResponse = RIL_UNSOL_STK_CC_ALPHA_NOTIFY;
+                break;
+            case 11031:
+                newResponse = RIL_UNSOL_UICC_SUBSCRIPTION_STATUS_CHANGED;
+                break;
+            case 1038: // RIL_UNSOL_TETHERED_MODE_STATE_CHANGED
+            case 1039: // RIL_UNSOL_DATA_NETWORK_STATE_CHANGED
+            case 1042: // RIL_UNSOL_QOS_STATE_CHANGED_IND
             case RIL_UNSOL_DEVICE_READY_NOTI: /* Registrant notification */
             case RIL_UNSOL_SIM_PB_READY: /* Registrant notification */
                 Rlog.v(RILJ_LOG_TAG,
@@ -372,7 +480,7 @@ public class SlteRIL extends RIL {
 
         switch (newResponse) {
             case RIL_UNSOL_AM:
-                ret = responseString(p);
+                ret = responseAm(p);
                 break;
             case RIL_UNSOL_STK_SEND_SMS_RESULT:
                 ret = responseInts(p);
@@ -382,7 +490,7 @@ public class SlteRIL extends RIL {
                 p.setDataPosition(dataPosition);
 
                 // Forward responses that we are not overriding to the super class
-                super.processUnsolicited(p);
+                super.processUnsolicited(p, type);
                 return;
         }
 
@@ -394,4 +502,23 @@ public class SlteRIL extends RIL {
                 break;
         }
     }
+
+    private Object
+    responseAm(Parcel p) {
+        Rlog.d(RILJ_LOG_TAG, "responseAm");
+
+        Object ret = responseString(p);
+        String amString = (String) ret;
+        Rlog.d(RILJ_LOG_TAG, "Executing AM: " + amString);
+
+        try {
+            Runtime.getRuntime().exec("am " + amString);
+        } catch (IOException e) {
+            e.printStackTrace();
+            Rlog.e(RILJ_LOG_TAG, "am " + amString + " could not be executed.");
+        }
+
+        return ret;
+    }
 }
+
