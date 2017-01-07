@@ -1,1 +1,1 @@
-add_lunch_combo lineage_v1a3g-userdebug
+add_lunch_combo cm_v1a3g-userdebug
