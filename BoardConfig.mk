@@ -34,7 +34,7 @@ BOARD_BLUETOOTH_BDROID_BUILDCFG_INCLUDE_DIR := $(LOCAL_PATH)/bluetooth
 TARGET_OTA_ASSERT_DEVICE := v1a3g,v1a3gxx
 
 # Kernel
-TARGET_KERNEL_CONFIG := cyanogenmod_deathly_v1a3g_defconfig
+TARGET_KERNEL_VARIANT_CONFIG := exynos5420_v1a3g_defconfig
 BOARD_CUSTOM_BOOTIMG := true
 
 # IR Blaster
