@@ -21,7 +21,7 @@ BOARD_VENDOR := samsung
 TARGET_SOC := exynos5420
 
 # Modem
-BOARD_MODEM_TYPE := xmm6260
+BOARD_MODEM_TYPE := xmm6360
 BOARD_PROVIDES_LIBRIL := true
 
 # RIL java overwrite
